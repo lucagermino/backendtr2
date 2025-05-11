@@ -1,0 +1,91 @@
+<style>
+    input {
+        display: block;
+        margin-bottom: 10px;
+    }
+</style>
+<h1>Productos en tiempo real</h1>
+
+<form id="productForm">
+    <input name="title" placeholder="Título" required />
+    <input name="description" placeholder="Descripción" required />
+    <input name="price" placeholder="Precio" type="number" step="0.01" required />
+    <input name="thumbnail" placeholder="Imagen (URL)" required />
+    <input name="code" placeholder="Código único" required />
+    <input name="stock" placeholder="Stock" type="number" required />
+    <button type="submit">Agregar producto</button>
+</form>
+
+<h1>Lista de productos</h1>
+<table border="1" cellpadding="8" cellspacing="0">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Título</th>
+            <th>Descripción</th>
+            <th>Precio</th>
+            <th>Thumbnail</th>
+            <th>Código</th>
+            <th>Stock</th>
+        </tr>
+    </thead>
+    <tbody id="productTableBody">
+        {{#each products}}
+        <tr>
+            <td>{{id}}</td>
+            <td>{{title}}</td>
+            <td>{{description}}</td>
+            <td>${{price}}</td>
+            <td><img src="{{thumbnail}}" alt="thumbnail" width="80" /></td>
+            <td>{{code}}</td>
+            <td>{{stock}}</td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>
+
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    const form = document.getElementById('productForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+        const product = Object.fromEntries(formData.entries());
+
+        // Convert price and stock to numbers
+        product.price = parseFloat(product.price);
+        product.stock = parseInt(product.stock);
+
+        try {
+            socket.emit('newProduct', product);
+            form.reset();
+        } catch (err) {
+            alert('Error al enviar el producto: ' + err.message);
+        }
+    });
+
+    const tableBody = document.getElementById('productTableBody');
+    socket.on('updateProducts', (products) => {
+        tableBody.innerHTML = '';
+        products.forEach(p => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+      <td>${p.id}</td>
+      <td>${p.title}</td>
+      <td>${p.description}</td>
+      <td>$${p.price}</td>
+      <td><img src="${p.thumbnail}" alt="thumbnail" width="80" /></td>
+      <td>${p.code}</td>
+      <td>${p.stock}</td>
+    `;
+            tableBody.appendChild(row);
+        });
+    });
+
+    socket.on('productError', (msg) => {
+        alert('Error: ' + msg);
+    });
+</script>
